@@ -1,0 +1,8 @@
+data/
+__pycache__/
+output/
+temp.json
+results.json
+api_key.txt
+wiki-02.xml
+entities.tsv
