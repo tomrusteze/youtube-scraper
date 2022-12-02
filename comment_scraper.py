@@ -122,7 +122,7 @@ def download_comments(YOUTUBE_VIDEO_URL, video_id, sort_by=SORT_BY_RECENT, langu
             yield {#'cid': comment['commentId'],
                    'video_id': video_id,
                    'comment_text': prepare_feature(''.join([c['text'] for c in comment['contentText'].get('runs', [])])),
-                   'votes': clean_number(comment.get('voteCount', {}).get('simpleText', '0')),
+                   'likes': clean_number(comment.get('voteCount', {}).get('simpleText', '0')),
                    'replies': clean_number(comment.get('replyCount', 0)),
                    }
 
