@@ -10,7 +10,6 @@ SLEEP = 1
 
 
 def get_dislikes(id, title):
-    return 5
     request = requests.get(f"https://returnyoutubedislikeapi.com/votes?videoId={id}", timeout=5)
     try:
         dislikes = request.json()["dislikes"]
