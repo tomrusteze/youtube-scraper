@@ -44,6 +44,18 @@ def prepare_feature(feature):
     return f'"{feature}"'
 
 
+def api_request_list(id_list):
+    # Builds the URL and requests the JSON from it
+    ids = ",".join(id_list)
+    request_url = f"https://www.googleapis.com/youtube/v3/videos?part=id,statistics,snippet&id={ids}&key={api_key}"
+    print(request_url)
+    request = requests.get(request_url)
+    if request.status_code == 429:
+        print("Temp-Banned due to excess requests, please wait and continue later")
+        sys.exit()
+    return request.json()
+
+
 def api_request(page_token, country_code):
     # Builds the URL and requests the JSON from it
     request_url = f"https://www.googleapis.com/youtube/v3/videos?part=id,statistics,snippet{page_token}chart=mostPopular&regionCode={country_code}&maxResults=50&key={api_key}"
@@ -148,6 +160,54 @@ def get_pages(country_code, next_page_token="&"):
     return df_video
 
 
+def get_relevant_ids(id):
+    request_url = f"https://www.googleapis.com/youtube/v3/search?part=id&maxResults=50&publishedAfter={published_after}&relatedToVideoId={id}&type=video&key={api_key}"
+    request = requests.get(request_url)
+    if request.status_code == 429:
+        print("Temp-Banned due to excess requests, please wait and continue later")
+        sys.exit()
+    
+    request = request.json()
+
+    if request.get('error'):
+            print(request['error'])
+    items = request.get('items', [])
+    
+    result = []
+    for item in items:
+        result.append(item['id']['videoId'])
+    return result
+
+def divide_chunks(l, n):
+    for i in range(0, len(l), n):
+        yield l[i:i + n]
+
+
+def gather_more_videos(data):
+    ids = data.video_id.to_list()
+    relevant_ids = set()
+    for id in ids[:50]:
+        relevant_ids.update(get_relevant_ids(id))
+        time.sleep(0.1)
+
+    relevant_ids = list(relevant_ids)[:1000]
+    print(f"Found {len(relevant_ids)} more relevant videos")
+    
+    # Split the large set up into sublists of length 50
+    for relevant_ids_subset in divide_chunks(relevant_ids, 50):
+        video_data_page = api_request_list(relevant_ids_subset)
+        time.sleep(0.1)
+        
+        if video_data_page.get('error'):
+            print(video_data_page['error'])
+        # Get all of the items as a list and let get_videos return the needed features
+        items = video_data_page.get('items', [])
+        
+        for video in get_videos(items):
+            data = data.append(video, ignore_index=True)
+    
+    return data.drop_duplicates(subset=['video_id'])
+
 def write_to_file(country_code, country_data):
 
     print(f"Writing {country_code} data to file...")
@@ -161,6 +221,7 @@ def write_to_file(country_code, country_data):
 def get_data():
     for country_code in country_codes:
         country_data = get_pages(country_code)
+        country_data = gather_more_videos(country_data)
         write_to_file(country_code, country_data)
 
 

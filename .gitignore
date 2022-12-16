@@ -6,3 +6,4 @@ results.json
 api_key.txt
 wiki-02.xml
 entities.tsv
+*.out
