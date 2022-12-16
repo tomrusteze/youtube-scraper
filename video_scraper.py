@@ -5,7 +5,8 @@ GitHub : https://github.com/tomrusteze
 The script is based on https://github.com/sleepyeePanda/Trending-YouTube-Scraper
 """
 
-import requests, sys, time, os, argparse
+import pandas as pd
+import requests, sys, time, os, argparse, csv
 # List of simple to collect features
 snippet_features = ["title",
                     "publishedAt",
@@ -15,6 +16,8 @@ snippet_features = ["title",
 snippet_features_names = ["title",
                           "channel_title",
                           "category_id"]
+
+published_after = "2021-12-14T00:00:00Z"
 
 # Any characters to exclude, generally these are things that become problematic in CSV files
 unsafe_characters = ['\n', '"']
@@ -53,7 +56,7 @@ def api_request(page_token, country_code):
 
 def get_tags(tags_list):
     # Takes a list of tags, prepares each tag and joins them into a string by the pipe character
-    return prepare_feature("|".join(tags_list))
+    return "|".join(tags_list)
 
 
 def get_videos(items):
@@ -68,14 +71,14 @@ def get_videos(items):
             continue
 
         # A full explanation of all of these features can be found on the GitHub page for this project
-        video_id = prepare_feature(video['id'])
+        video_id = video['id']
 
         # Snippet and statistics are sub-dicts of video, containing the most useful info
         snippet = video['snippet']
         statistics = video['statistics']
 
         # This list contains all of the features in snippet that are 1 deep and require no special processing
-        features = [prepare_feature(snippet.get(feature, "")) for feature in snippet_features]
+        #features = [prepare_feature(snippet.get(feature, "")) for feature in snippet_features]
 
         # The following are special case features which require unique processing, or are not within the snippet dict
         #description = snippet.get("description", "")
@@ -101,16 +104,25 @@ def get_videos(items):
         else:
             comment_count = 0
 
-        date = features.pop(1)
         # Compiles all of the various bits of info into one consistently formatted line
-        line = [video_id] + features + [prepare_feature(x) for x in [tags, view_count, likes, dislikes,
-                                                                       comment_count, thumbnail_link]] + [date]
-        lines.append(",".join(line))
-    return lines
+        #line = [video_id] + features + [prepare_feature(x) for x in [tags, view_count, likes, dislikes,
+        #                                                                       comment_count, thumbnail_link]] + [date]
+        #lines.append(",".join(line))
+        yield {'video_id': video_id,
+        	   'title': snippet.get("title", ""),
+               'channel_title': snippet.get("channelTitle", ""),
+               'category_id': snippet.get("categoryId", ""),
+               'tags': tags,
+               'views': int(view_count),
+               'likes': int(likes),
+               'dislikes': int(dislikes),
+               'comment_total': int(comment_count),
+               'thumbnail_link': thumbnail_link,
+               'date': snippet.get("publishedAt", "")}
 
 
 def get_pages(country_code, next_page_token="&"):
-    country_data = []
+    df_video = pd.DataFrame()
 
     # Because the API uses page tokens (which are literally just the same function of numbers everywhere) it is much
     # more inconvenient to iterate over pages, but that is what is done here.
@@ -129,9 +141,11 @@ def get_pages(country_code, next_page_token="&"):
 
         # Get all of the items as a list and let get_videos return the needed features
         items = video_data_page.get('items', [])
-        country_data += get_videos(items)
+        
+        for video in get_videos(items):
+            df_video = df_video.append(video, ignore_index=True)
 
-    return country_data
+    return df_video
 
 
 def write_to_file(country_code, country_data):
@@ -141,14 +155,12 @@ def write_to_file(country_code, country_data):
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
-    with open(f"{output_dir}/{time.strftime('%y.%d.%m')}_{country_code}_videos.csv", "w+", encoding='utf-8') as file:
-        for row in country_data:
-            file.write(f"{row}\n")
-
+    country_data.to_csv(f"{output_dir}/{time.strftime('%y.%d.%m')}_{country_code}_videos.csv", encoding='utf-8', index=False, quotechar='"', quoting=csv.QUOTE_NONNUMERIC)
+    
 
 def get_data():
     for country_code in country_codes:
-        country_data = [",".join(header)] + get_pages(country_code)
+        country_data = get_pages(country_code)
         write_to_file(country_code, country_data)
 
 

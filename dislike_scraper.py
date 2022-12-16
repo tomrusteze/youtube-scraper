@@ -28,5 +28,5 @@ if __name__ == "__main__":
     FILE_NAME = sys.argv[1]
     
     df_video = pd.read_csv(FILE_NAME)
-    df_video['dislikes'] = df_video.apply(lambda row: get_dislikes(row['video_id'], row['title']), axis = 1)
+    df_video['dislikes'] = df_video.drop_duplicates(subset=['video_id']).apply(lambda row: get_dislikes(row['video_id'], row['title']), axis = 1)
     df_video.to_csv(f"{FILE_NAME}", encoding='utf-8', index=False, quotechar='"', quoting=csv.QUOTE_NONNUMERIC)    
