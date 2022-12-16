@@ -18,7 +18,7 @@ import os
 import sys
 import re
 import time
-
+import csv
 import requests
 
 from video_scraper import prepare_feature
@@ -62,11 +62,12 @@ def ajax_request(session, endpoint, ytcfg, retries=5, sleep=20):
         if response.status_code in [403, 413]:
             return {}
         else:
+            print(response.status_code)
             time.sleep(sleep)
 
 
 def clean_number(number):
-    return str(number).replace("K","000").replace(',','') 
+    return int(str(number).replace("K","000").replace(',',''))
     
 
 def download_comments(YOUTUBE_VIDEO_URL, video_id, sort_by=SORT_BY_RECENT, language=None, sleep=0.1):
@@ -121,7 +122,7 @@ def download_comments(YOUTUBE_VIDEO_URL, video_id, sort_by=SORT_BY_RECENT, langu
         for comment in reversed(list(search_dict(response, 'commentRenderer'))):
             yield {#'cid': comment['commentId'],
                    'video_id': video_id,
-                   'comment_text': prepare_feature(''.join([c['text'] for c in comment['contentText'].get('runs', [])])),
+                   'comment_text': ''.join([c['text'] for c in comment['contentText'].get('runs', [])]),
                    'likes': clean_number(comment.get('voteCount', {}).get('simpleText', '0')),
                    'replies': clean_number(comment.get('replyCount', 0)),
                    }
@@ -150,7 +151,7 @@ if __name__ == "__main__":
         exit()
     
     VIDEO_FILE = sys.argv[1]
-    COMMENT_LIMIT = sys.argv[2]
+    COMMENT_LIMIT = int(sys.argv[2])
 
     FILE_NAME = VIDEO_FILE.replace("video", "comment")
     if(FILE_NAME == VIDEO_FILE):
@@ -168,7 +169,6 @@ if __name__ == "__main__":
         try:
             df_comment = pd.DataFrame()
             youtube_url = "https://www.youtube.com/watch?v=" + video_id
-            limit = int(COMMENT_LIMIT)
 
             print('Downloading Youtube comments for video:', video_title)
 
@@ -180,19 +180,17 @@ if __name__ == "__main__":
 
                 df_comment = df_comment.append(comment, ignore_index=True)
 
-                # comments overview
-                comment_json = json.dumps(comment, ensure_ascii=False)           
                 count += 1
 
-                if limit and count >= limit:
+                if COMMENT_LIMIT and count >= COMMENT_LIMIT:
                     break
             
             if not os.path.isfile(FILE_NAME):
-                df_comment.to_csv(FILE_NAME, encoding='utf-8', index=False)
+                df_comment.to_csv(FILE_NAME, encoding='utf-8', index=False, quotechar='"', quoting=csv.QUOTE_NONNUMERIC)
             else:  # else it exists so append without writing the header
-                df_comment.to_csv(FILE_NAME, mode='a', encoding='utf-8', index=False, header=False)
+                df_comment.to_csv(FILE_NAME, mode='a', encoding='utf-8', index=False, header=False,quotechar='"', quoting=csv.QUOTE_NONNUMERIC)
 
-            print('\n[{:.2f} seconds] Done!'.format(time.time() - start_time))
+            print('[{:.2f} seconds] Done! \n'.format(time.time() - start_time))
 
         except Exception as e:
             print('Error:', str(e))

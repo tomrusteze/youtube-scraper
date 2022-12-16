@@ -4,12 +4,13 @@ GitHub : https://github.com/tomrusteze
 """
 
 import pandas as pd
-import requests, sys, time
+import requests, sys, time, csv
 
 SLEEP = 1
 
 
 def get_dislikes(id, title):
+    return 5
     request = requests.get(f"https://returnyoutubedislikeapi.com/votes?videoId={id}", timeout=5)
     try:
         dislikes = request.json()["dislikes"]
@@ -29,4 +30,4 @@ if __name__ == "__main__":
     
     df_video = pd.read_csv(FILE_NAME)
     df_video['dislikes'] = df_video.apply(lambda row: get_dislikes(row['video_id'], row['title']), axis = 1)
-    df_video.to_csv(f"{FILE_NAME}", encoding='utf-8', index=False)    
+    df_video.to_csv(f"{FILE_NAME}", encoding='utf-8', index=False, quotechar='"', quoting=csv.QUOTE_NONNUMERIC)    
