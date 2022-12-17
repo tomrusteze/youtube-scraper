@@ -17,7 +17,7 @@ snippet_features_names = ["title",
                           "channel_title",
                           "category_id"]
 
-published_after = "2021-12-14T00:00:00Z"
+PUBLISHED_AFTER = "2021-12-14T00:00:00Z"
 
 # Any characters to exclude, generally these are things that become problematic in CSV files
 unsafe_characters = ['\n', '"']
@@ -44,11 +44,10 @@ def prepare_feature(feature):
     return f'"{feature}"'
 
 
-def api_request_list(id_list):
+def api_request_list(id_list, country_code):
     # Builds the URL and requests the JSON from it
     ids = ",".join(id_list)
-    request_url = f"https://www.googleapis.com/youtube/v3/videos?part=id,statistics,snippet&id={ids}&key={api_key}"
-    print(request_url)
+    request_url = f"https://www.googleapis.com/youtube/v3/videos?part=id,statistics,snippet&id={ids}&regionCode={country_code}&key={api_key}"
     request = requests.get(request_url)
     if request.status_code == 429:
         print("Temp-Banned due to excess requests, please wait and continue later")
@@ -161,7 +160,7 @@ def get_pages(country_code, next_page_token="&"):
 
 
 def get_relevant_ids(id):
-    request_url = f"https://www.googleapis.com/youtube/v3/search?part=id&maxResults=50&publishedAfter={published_after}&relatedToVideoId={id}&type=video&key={api_key}"
+    request_url = f"https://www.googleapis.com/youtube/v3/search?part=id&maxResults=50&publishedAfter={PUBLISHED_AFTER}&relatedToVideoId={id}&type=video&key={api_key}"
     request = requests.get(request_url)
     if request.status_code == 429:
         print("Temp-Banned due to excess requests, please wait and continue later")
@@ -183,19 +182,19 @@ def divide_chunks(l, n):
         yield l[i:i + n]
 
 
-def gather_more_videos(data):
+def gather_more_videos(data, country_code):
     ids = data.video_id.to_list()
     relevant_ids = set()
-    for id in ids[:50]:
+    for id in ids[:RELATED_SEED]:
         relevant_ids.update(get_relevant_ids(id))
         time.sleep(0.1)
 
-    relevant_ids = list(relevant_ids)[:1000]
+    relevant_ids = list(relevant_ids - set(ids))[:REQUIRED_VIDEOS]
     print(f"Found {len(relevant_ids)} more relevant videos")
     
     # Split the large set up into sublists of length 50
     for relevant_ids_subset in divide_chunks(relevant_ids, 50):
-        video_data_page = api_request_list(relevant_ids_subset)
+        video_data_page = api_request_list(relevant_ids_subset, country_code)
         time.sleep(0.1)
         
         if video_data_page.get('error'):
@@ -210,7 +209,7 @@ def gather_more_videos(data):
 
 def write_to_file(country_code, country_data):
 
-    print(f"Writing {country_code} data to file...")
+    print(f"Writing {country_code} data to file,", len(country_data), "videos found")
 
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
@@ -221,7 +220,7 @@ def write_to_file(country_code, country_data):
 def get_data():
     for country_code in country_codes:
         country_data = get_pages(country_code)
-        country_data = gather_more_videos(country_data)
+        country_data = gather_more_videos(country_data, country_code)
         write_to_file(country_code, country_data)
 
 
@@ -231,9 +230,12 @@ if __name__ == "__main__":
     parser.add_argument('--key_path', help='Path to the file containing the api key, by default will use api_key.txt in the same directory', default='api_key.txt')
     parser.add_argument('--country_code_path', help='Path to the file containing the list of country codes to scrape, by default will use country_codes.txt in the same directory', default='country_codes.txt')
     parser.add_argument('--output_dir', help='Path to save the outputted files in', default='output/')
+    parser.add_argument('--related_seed', help='Number of videos that we parse for extra videos, by default will use 0', default=0)
+    parser.add_argument('--required_videos', help='Number of videos that we try to find allong with the top 200, default is 0', default=0)
 
     args = parser.parse_args()
-
+    RELATED_SEED = args.related_seed
+    REQUIRED_VIDEOS = args.required_videos
     output_dir = args.output_dir
     api_key, country_codes = setup(args.key_path, args.country_code_path)
 
