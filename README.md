@@ -1,4 +1,4 @@
-# txmm-project
+# txmm-project | Returning the Dislike Button
 This repository is created for the course Text and Multimedia Mining to easily scrape YouTube videos and comments.
 ## Usage
 Create a file `api_key.txt` with your YouTube API key. You will need a valid API key for the YouTube Data API. It is free and the instructions for doing so are [here](https://developers.google.com/youtube/registering_an_application). It is slightly awkward to get a key, but if you follow the instructions you should be ok. \
