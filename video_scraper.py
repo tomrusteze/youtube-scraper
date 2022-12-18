@@ -234,8 +234,8 @@ if __name__ == "__main__":
     parser.add_argument('--required_videos', help='Number of videos that we try to find allong with the top 200, default is 0', default=0)
 
     args = parser.parse_args()
-    RELATED_SEED = args.related_seed
-    REQUIRED_VIDEOS = args.required_videos
+    RELATED_SEED = int(args.related_seed)
+    REQUIRED_VIDEOS = int(args.required_videos)
     output_dir = args.output_dir
     api_key, country_codes = setup(args.key_path, args.country_code_path)
 
