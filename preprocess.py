@@ -36,7 +36,12 @@ def tokenize_comment(sentence):
 def flair_prediction(x):
     sentence = Sentence(x)
     sia.predict(sentence)
-    return sentence.score
+    if "POSITIVE" in str(sentence):
+        return sentence.score
+    elif "NEGATIVE" in str(sentence):
+        return -sentence.score
+    else:
+        return 0
 
 
 if __name__ == '__main__':
@@ -51,8 +56,7 @@ if __name__ == '__main__':
 
 
     print("Old dataset videos shape:", videos_1.shape, "and comments:", comments_1.shape)
-    print("New dataset videos shape:", videos_2.shape, "and comments:", comments_2.shape)
-
+   
     # Perform Sentiment Analysis using the Pattern Library on all comments
     if sentiment_library == "Pattern":
         # Dataset 1
