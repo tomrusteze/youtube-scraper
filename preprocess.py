@@ -1,9 +1,9 @@
+from flair.models import TextClassifier
+from flair.data import Sentence
+
 from pattern.en import parse
 from pattern.en import pprint
 from pattern.en import sentiment
-
-from flair.models import TextClassifier
-from flair.data import Sentence
 
 import numpy as np
 import pandas as pd
@@ -18,7 +18,6 @@ import csv
 from nltk.stem import WordNetLemmatizer
 from nltk.corpus import stopwords
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
-import mplcursors
 warnings.filterwarnings("ignore")
 pd.set_option('display.max_columns',None)
 
@@ -29,6 +28,9 @@ from sklearn.metrics import mean_squared_error, r2_score
 nltk.download('stopwords')
 nltk.download('wordnet')
 nltk.download('vader_lexicon')
+nltk.download('omw-1.4')
+
+wnl = WordNetLemmatizer()
 
 def tokenize_comment(sentence):
     return ' '.join([wnl.lemmatize(word) for word in sentence.split() if word not in set(stopwords.words('english'))])
@@ -47,16 +49,42 @@ def flair_prediction(x):
 if __name__ == '__main__':
     
     sentiment_library = "Pattern" #"NLTK" #Flair
-    output_dir = "data/youtube_comment/preprocessed"
-    comments_1_file = 'data/youtube_comment/UScomments_1.csv'
-    videos_1_file = 'data/youtube_comment/USvideos_1.csv'
+    output_dir = "preprocessed"
+    comments_1_file = 'output/UScomments_1_short.csv'
+    videos_1_file = 'output/USvideos_1.csv'
 
     comments_1 = pd.read_csv(comments_1_file, error_bad_lines=False)
     videos_1 = pd.read_csv(videos_1_file, error_bad_lines=False)
 
+    comments_1['comment_text_processed'] = comments_1['comment_text']
+    comments_1['comment_text_processed'] = comments_1['comment_text_processed'].str.replace("[^a-zA-Z#]", " ")
+    comments_1['comment_text_processed'] = comments_1['comment_text_processed'].apply(lambda x: ' '.join([w for w in x.split() if len(w)>3]))
+    comments_1['comment_text_processed'] = comments_1['comment_text_processed'].apply(lambda x:x.lower())
+    comments_1['comment_text_processed'] = comments_1['comment_text_processed'].apply(tokenize_comment)
 
-    print("Old dataset videos shape:", videos_1.shape, "and comments:", comments_1.shape)
-   
+    # Pattern
+    print("Pattern analysis")
+    comments_1['Sentiment Pattern'] = comments_1['comment_text'].apply(lambda x: sentiment(x)[0])
+
+    # Flair
+    print("Flair analysis")
+    sia = TextClassifier.load('en-sentiment')
+    comments_1['Sentiment Flair'] = comments_1["comment_text"].apply(flair_prediction)
+
+    # NLTK
+    print("NLTK analysis")
+    sia_2 = SentimentIntensityAnalyzer()
+    comments_1['Sentiment NLTK'] = comments_1['comment_text_processed'].apply(lambda x:sia_2.polarity_scores(x)['compound'])
+
+
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
+    comments_1.to_csv(f"{output_dir}/comments_1_short_processed.csv", encoding='utf-8', index=False, quotechar='"', quoting=csv.QUOTE_NONNUMERIC)
+
+    exit()
+    #print("Old dataset videos shape:", videos_1.shape, "and comments:", comments_1.shape)
+    
     # Perform Sentiment Analysis using the Pattern Library on all comments
     if sentiment_library == "Pattern":
         # Dataset 1
