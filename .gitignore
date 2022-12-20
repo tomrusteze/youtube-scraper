@@ -1,4 +1,5 @@
 data/
+preprocessed/
 __pycache__/
 output/
 temp.json
