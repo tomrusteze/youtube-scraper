@@ -1,6 +1,6 @@
 # txmm-project | Returning the Dislike Button
 This repository is created for the course Text and Multimedia Mining to easily scrape YouTube videos and comments.
-## Usage
+## Gathering data
 Create a file `api_key.txt` with your YouTube API key. You will need a valid API key for the YouTube Data API. It is free and the instructions for doing so are [here](https://developers.google.com/youtube/registering_an_application). It is slightly awkward to get a key, but if you follow the instructions you should be ok. \
 Use the `country_code.txt` file to select the country that you want to download the most popular videos from. These are 2 letter country abbreviations according to ISO 3166-1.
 
@@ -13,3 +13,6 @@ With these videos, we can run `python3 comment_scraper.py output/<date>US_videos
 We can then run `python3 dislike_scraper.py output/<date>US_videos.csv` to scrape the dislikes using the Return YouTube Dislike API.
 
 We now have 2 files in our `output` directory, on these we can perform some mining. See the notebook for more details.
+
+## Notebook
+If you want to use the data from the [paper](Returning_the_dislike_button.pdf), then unzip `dataset.zip` and open the [notebook](notebook.ipynb). Otherwise, you can gather your own dataset and use that.
